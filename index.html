@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>紙本送簽進度查詢</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: '微軟正黑體', 'Microsoft JhengHei', sans-serif;
+            background: linear-gradient(135deg, #f0f2f5 0%, #e8eaed 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .search-form {
+            background: #f8f9fa;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        
+        .search-form h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 16px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        label {
+            font-size: 13px;
+            color: #555;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        input, select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 13px;
+            font-family: inherit;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 10px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+        
+        .btn-search {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-search:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-clear {
+            background: #e9ecef;
+            color: #333;
+        }
+        
+        .btn-clear:hover {
+            background: #dee2e6;
+        }
+        
+        .results-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #e7f3ff;
+            border-left: 4px solid #667eea;
+            border-radius: 5px;
+        }
+        
+        .results-info p {
+            color: #0066cc;
+            font-weight: 600;
+        }
+        
+        .refresh-countdown {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        
+        .refresh-countdown.show {
+            display: block;
+        }
+        
+        .refresh-countdown span {
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #667eea;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            padding: 15px;
+            background: #ffe7e7;
+            color: #d32f2f;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #d32f2f;
+        }
+        
+        .initial-message {
+            text-align: center;
+            padding: 80px 20px;
+            color: #999;
+        }
+        
+        .initial-message-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        .initial-message p {
+            font-size: 18px;
+            color: #666;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            table-layout: fixed;
+        }
+        
+        thead {
+            background: #f8f9fa;
+            border-top: 2px solid #667eea;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #333;
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+            color: #555;
+            word-wrap: break-word;
+            overflow: hidden;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        
+        .status-done {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+        
+        .status-pending {
+            background: #fff3e0;
+            color: #e65100;
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        
+        .no-results-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        /* 欄位寬度調整 */
+        th:nth-child(1), td:nth-child(1) { width: 11%; }  /* 收件日 */
+        th:nth-child(2), td:nth-child(2) { width: 9%; }   /* 公司別 */
+        th:nth-child(3), td:nth-child(3) { width: 14%; }  /* 單位別 */
+        th:nth-child(4), td:nth-child(4) { width: 8%; }   /* 單別 */
+        th:nth-child(5), td:nth-child(5) { width: 10%; }  /* 客戶/廠商 */
+        th:nth-child(6), td:nth-child(6) { width: 8%; }   /* 製單人 */
+        th:nth-child(7), td:nth-child(7) { width: 8%; }   /* 送給特助 */
+        th:nth-child(8), td:nth-child(8) { width: 8%; }   /* 特助已簽 */
+        th:nth-child(9), td:nth-child(9) { width: 8%; }   /* 送給董事長 */
+        th:nth-child(10), td:nth-child(10) { width: 8%; } /* 董事長已簽 */
+        th:nth-child(11), td:nth-child(11) { width: 8%; } /* 發回單位 */
+        
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+            
+            table {
+                font-size: 12px;
+            }
+            
+            th, td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div style="position: absolute; bottom: 8px; right: 20px; font-size: 10px; color: rgba(255,255,255,0.7);">
+                Designed by <strong>Gary</strong>
+            </div>
+            <h1>📊 紙本送簽進度查詢</h1>
+            <p> </p>
+        </div>
+        
+        <div class="content">
+            <div class="search-form">
+                <h3>搜尋條件</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>收件日期（開始）</label>
+                        <input type="date" id="startDate">
+                    </div>
+                    <div class="form-group">
+                        <label>收件日期（結束）</label>
+                        <input type="date" id="endDate">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>公司別</label>
+                        <select id="company">
+                            <option value="">--- 全部 ---</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>單位別</label>
+                        <select id="department">
+                            <option value="">--- 全部 ---</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>客戶/廠商</label>
+                        <input type="text" id="customer" placeholder="輸入客戶/廠商名稱">
+                    </div>
+                    <div class="form-group">
+                        <label>製單人</label>
+                        <input type="text" id="maker" placeholder="輸入製單人名稱">
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button class="btn-clear" onclick="clearForm()">清空</button>
+                    <button class="btn-search" onclick="searchRecords()">查詢</button>
+                </div>
+            </div>
+            
+            <div class="refresh-countdown" id="refreshCountdownContainer">
+                ⟳ 將在 <span id="refreshCountdown">300</span> 秒後自動同步
+            </div>
+            
+<div id="resultsArea">
+    <div class="initial-message">
+        <div class="initial-message-icon">🔍</div>
+        <p>請輸入搜尋條件並點擊「查詢」按鈕</p>
+    </div>
+</div>
+    
+    <script>
+        let hasSearched = false; 
+        let allRawData = []; 
+        
+        // 🌐 ⚠️ 記得在這裡放入你的 Google GAS 網址 ⚠️
+        const GAS_PROXY_URL = "https://script.google.com/macros/s/AKfycbxATUTPcxM-MEQAfjS-UkOCIJoxvfnLS9DA79nM9D7iJB2_pedbbpapsvuaoyVu_ZhnxA/exec";
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchDataFromProxy().then(() => {
+                loadCompanies();
+                loadDepartments();
+                
+                // 💡 關鍵改動：網頁一打開，在背景默默抓完 JSON 後，自動幫同事執行「空條件查詢」
+                // 這樣同事一進網頁，直接就是看到大表格呈現所有最新的歷史資料，不需要自己去按查詢按鈕！
+
+            });
+        });
+        
+        // 從 Google GAS 安全代理通道抓取 JSON
+        function fetchDataFromProxy() {
+            return fetch(GAS_PROXY_URL)
+                .then(response => {
+                    if (!response.ok) throw new Error('無法從雲端安全通道獲取資料');
+                    return response.json();
+                })
+                .then(data => {
+                    allRawData = Array.isArray(data) ? data.reverse() : [];
+                })
+                .catch(error => {
+                    console.error('資料載入失敗:', error);
+                    const resultsArea = document.getElementById('resultsArea');
+                    if (resultsArea) {
+                        resultsArea.innerHTML = `<div class="error">連線失敗: ${error.message}，請確認 GAS 部署設定。</div>`;
+                    }
+                });
+        }
+        
+        // 動態生成公司選單
+        function loadCompanies() {
+            const companies = [...new Set(allRawData.map(r => r['公司別']))].filter(Boolean).sort();
+            const select = document.getElementById('company');
+            select.innerHTML = '<option value="">--- 全部 ---</option>';
+            companies.forEach(company => {
+                const option = document.createElement('option');
+                option.value = company;
+                option.textContent = company;
+                select.appendChild(option);
+            });
+        }
+        
+        // 動態生成單位選單
+        function loadDepartments() {
+            const departments = [...new Set(allRawData.map(r => r['單位別']))].filter(Boolean).sort();
+            const select = document.getElementById('department');
+            select.innerHTML = '<option value="">--- 全部 ---</option>';
+            departments.forEach(department => {
+                const option = document.createElement('option');
+                option.value = department;
+                option.textContent = department;
+                select.appendChild(option);
+            });
+        }
+        
+        // 從 Python 多行簽核文字提取特定狀態時間
+        function parseStatus(statusText, statusName) {
+            if (!statusText) return '';
+            const lines = statusText.split('\n');
+            for (let line of lines) {
+                if (line.includes(`✅ ${statusName}`)) {
+                    return line.replace(`✅ ${statusName}`, '').trim() || '✅';
+                }
+            }
+            return '';
+        }
+        
+        // 查詢記錄
+        function searchRecords() {
+            hasSearched = true;
+            
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const company = document.getElementById('company').value;
+            const department = document.getElementById('department').value;
+            const customer = document.getElementById('customer').value.trim().toLowerCase();
+            const maker = document.getElementById('maker').value.trim().toLowerCase();
+            
+            const resultsArea = document.getElementById('resultsArea');
+            resultsArea.innerHTML = '<div class="loading"><div class="spinner"></div><p>加載中...</p></div>';
+            
+            document.getElementById('refreshCountdownContainer').classList.add('show');
+            
+            // 篩選過濾
+            let filtered = allRawData.filter(record => {
+                if (startDate && record['收件日'] < startDate) return false;
+                if (endDate && record['收件日'] > endDate) return false;
+                if (company && record['公司別'] !== company) return false;
+                if (department && record['單位別'] !== department) return false;
+                if (customer && (!record['客戶/廠商'] || !record['客戶/廠商'].toLowerCase().includes(customer))) return false;
+                if (maker && (!record['製單人'] || !record['製單人'].toLowerCase().includes(maker))) return false;
+                return true;
+            });
+            
+            // 短暫延時，流暢渲染
+            setTimeout(() => {
+                displayResults(filtered, filtered.length);
+            }, 150);
+        }
+        
+        // 顯示表格進度
+        function displayResults(records, count) {
+            const resultsArea = document.getElementById('resultsArea');
+            
+            if (count === 0) {
+                resultsArea.innerHTML = `
+                    <div class="no-results">
+                        <div class="no-results-icon">🔍</div>
+                        <p>找不到符合條件的記錄</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let html = `
+                <div class="results-info">
+                    <p>找到 <strong>${count}</strong> 筆記錄 (進度每 5 分鐘同步更新)</p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>收件日</th>
+                            <th>公司別</th>
+                            <th>單位別</th>
+                            <th>單別</th>
+                            <th>客戶/廠商</th>
+                            <th>製單人</th>
+                            <th>送給特助</th>
+                            <th>特助已簽</th>
+                            <th>送給董事長</th>
+                            <th>董事長已簽</th>
+                            <th>發回單位</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            records.forEach(record => {
+                const statusText = record['簽核狀態'] || '';
+                
+                // 動態匹配解析
+                const t1 = parseStatus(statusText, '送簽特助');
+                const t2 = parseStatus(statusText, '特助已簽');
+                const t3 = parseStatus(statusText, '送簽董事長');
+                const t4 = parseStatus(statusText, '董事長已簽');
+                const t5 = parseStatus(statusText, '發回單位');
+
+                html += `
+                    <tr>
+                        <td>${record['收件日'] || ''}</td>
+                        <td>${record['公司別'] || ''}</td>
+                        <td>${record['單位別'] || ''}</td>
+                        <td>${record['單別'] || ''}</td>
+                        <td>${record['客戶/廠商'] || ''}</td>
+                        <td>${record['製單人'] || ''}</td>
+                        <td><span class="status-badge ${t1 ? 'status-done' : 'status-pending'}" title="${t1}">${t1 ? '已送簽' : '待送'}</span></td>
+                        <td><span class="status-badge ${t2 ? 'status-done' : 'status-pending'}" title="${t2}">${t2 ? '已簽核' : '待簽'}</span></td>
+                        <td><span class="status-badge ${t3 ? 'status-done' : 'status-pending'}" title="${t3}">${t3 ? '已送簽' : '待送'}</span></td>
+                        <td><span class="status-badge ${t4 ? 'status-done' : 'status-pending'}" title="${t4}">${t4 ? '已簽核' : '待簽'}</span></td>
+                        <td><span class="status-badge ${t5 ? 'status-done' : 'status-pending'}" title="${t5}">${t5 ? '已發回' : '未發'}</span></td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+            `;
+            
+            resultsArea.innerHTML = html;
+        }
+        
+        // 點擊「清空」時回歸全量顯示狀態，而不是顯示空白
+        function clearForm() {
+            document.getElementById('startDate').value = '';
+            document.getElementById('endDate').value = '';
+            document.getElementById('company').value = '';
+            document.getElementById('department').value = '';
+            document.getElementById('customer').value = '';
+            document.getElementById('maker').value = '';
+            
+            countdownTimer = autoRefreshInterval;
+            searchRecords(); // 💡 清空條件後，自動重刷出全部完整資料
+        }
+        
+        // 自動刷新計時器 (5分鐘)
+        let autoRefreshInterval = 300; 
+        let countdownTimer = autoRefreshInterval;
+        
+        function updateCountdown() {
+            const countdownEl = document.getElementById('refreshCountdown');
+            if (countdownEl && hasSearched) {
+                countdownEl.textContent = countdownTimer;
+            }
+            
+            countdownTimer--;
+            if (countdownTimer < 0) {
+                countdownTimer = autoRefreshInterval;
+                fetchDataFromProxy().then(() => {
+                    searchRecords(); // 每5分鐘在背後自動刷新當前的查詢表格
+                });
+            }
+        }
+        
+        setInterval(updateCountdown, 1000);
+    </script>
+</body>
+</html>
