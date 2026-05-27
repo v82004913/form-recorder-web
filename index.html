@@ -288,31 +288,6 @@
         th:nth-child(10), td:nth-child(10) { width: 8%; } /* 董事長已簽 */
         th:nth-child(11), td:nth-child(11) { width: 8%; } /* 發回單位 */
         
-        /* 強制繁體中文「年 / 月 / 日」日期欄位佔位符 */
-        input[type="date"] {
-            position: relative;
-        }
-
-        input[type="date"]::before {
-            content: "年 / 月 / 日";
-            color: #aaa;
-            position: absolute;
-            left: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: #f8f9fa; 
-            padding-right: 20px;
-            width: 80%;
-            pointer-events: none;
-        }
-
-        input[type="date"]:focus::before,
-        input[type="date"]::after,
-        input[type="date"]:not([value=""]):valid::before {
-            display: none !important;
-            content: "";
-        }
-        
         @media (max-width: 768px) {
             .form-row {
                 grid-template-columns: 1fr;
@@ -409,6 +384,7 @@
         let hasSearched = false; 
         let allRawData = []; 
         
+        // 🌐 Google GAS 私人雲端安全傳輸通道
         const GAS_PROXY_URL = "https://script.google.com/macros/s/AKfycbxATUTPcxM-MEQAfjS-UkOCIJoxvfnLS9DA79nM9D7iJB2_pedbbpapsvuaoyVu_ZhnxA/exec";
 
         // 初始化
@@ -417,20 +393,9 @@
                 loadCompanies();
                 loadDepartments();
             });
-
-            const dateInputs = document.querySelectorAll('input[type="date"]');
-            dateInputs.forEach(input => {
-                input.addEventListener('change', function() {
-                    if (this.value) {
-                        this.setAttribute('value', this.value);
-                    } else {
-                        this.removeAttribute('value');
-                    }
-                });
-            });
         });
         
-        // 從 Google GAS 安全代理通道抓取 JSON
+        // 從 Google GAS 代理通道撈取 GitHub JSON
         function fetchDataFromProxy() {
             return fetch(GAS_PROXY_URL)
                 .then(response => {
@@ -495,7 +460,6 @@
             const endDate = document.getElementById('endDate').value;
             const company = document.getElementById('company').value;
             const department = document.getElementById('department').value;
-            // 💡 這裡對應新的單號輸入框欄位
             const docNo = document.getElementById('docNo').value.trim().toLowerCase();
             const maker = document.getElementById('maker').value.trim().toLowerCase();
             
@@ -504,18 +468,18 @@
             
             document.getElementById('refreshCountdownContainer').classList.add('show');
             
-            // 篩選過濾
+            // 篩選過濾邏輯 (已對接單號過濾)
             let filtered = allRawData.filter(record => {
                 if (startDate && record['收件日'] < startDate) return false;
                 if (endDate && record['收件日'] > endDate) return false;
                 if (company && record['公司別'] !== company) return false;
                 if (department && record['單位別'] !== department) return false;
-                // 💡 這裡將篩選邏輯從比對「客戶/廠商」修改為精準比對「單號」
                 if (docNo && (!record['單號'] || !record['單號'].toLowerCase().includes(docNo))) return false;
                 if (maker && (!record['製單人'] || !record['製單人'].toLowerCase().includes(maker))) return false;
                 return true;
             });
             
+            // 延時流暢渲染
             setTimeout(() => {
                 displayResults(filtered, filtered.length);
             }, 150);
@@ -592,16 +556,17 @@
             resultsArea.innerHTML = html;
         }
         
-        // 修正清空邏輯：清空欄位後完全收回大表格
+        // 清空表單：確保清空欄位值並將日期類型強制切回文字，100%彈回「年 / 月 / 日」提示
         function clearForm() {
-            document.getElementById('startDate').value = '';
-            document.getElementById('endDate').value = '';
-            document.getElementById('startDate').removeAttribute('value');
-            document.getElementById('endDate').removeAttribute('value');
+            const sDate = document.getElementById('startDate');
+            const eDate = document.getElementById('endDate');
+            sDate.value = '';
+            eDate.value = '';
+            sDate.type = 'text';
+            eDate.type = 'text';
             
             document.getElementById('company').value = '';
             document.getElementById('department').value = '';
-            // 💡 清空時同時清除新的單號輸入框
             document.getElementById('docNo').value = '';
             document.getElementById('maker').value = '';
             
@@ -630,6 +595,7 @@
             if (countdownTimer < 0) {
                 countdownTimer = autoRefreshInterval;
                 fetchDataFromProxy().then(() => {
+                    // 只有當同仁此時正看著查詢結果時，背後才會自動重刷表格，否則保持靜態
                     if (hasSearched) {
                         searchRecords(); 
                     }
