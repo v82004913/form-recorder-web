@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>紙本送簽進度查詢</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <style>
         * {
             margin: 0;
@@ -93,6 +94,12 @@
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        /* 調整日期欄位背景色，確保手動清除時外觀正常 */
+        input[readonly] {
+            background-color: #fff !important;
+            cursor: pointer;
         }
         
         .button-group {
@@ -275,6 +282,11 @@
             margin-bottom: 15px;
         }
         
+        /* 🛠️ 客製化調整 Flatpickr 月曆的繁中微調與字體設定 */
+        .flatpickr-calendar {
+            font-family: inherit !important;
+        }
+        
         /* 欄位寬度調整 */
         th:nth-child(1), td:nth-child(1) { width: 11%; }  /* 收件日 */
         th:nth-child(2), td:nth-child(2) { width: 9%; }   /* 公司別 */
@@ -327,11 +339,11 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label>收件日期（開始）</label>
-                        <input type="text" id="startDate" placeholder="年 / 月 / 日" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+                        <input type="text" id="startDate" placeholder="年 / 月 / 日" readonly>
                     </div>
                     <div class="form-group">
                         <label>收件日期（結束）</label>
-                        <input type="text" id="endDate" placeholder="年 / 月 / 日" onfocus="(this.type='date')" onblur="if(!this.value)this.type='text'">
+                        <input type="text" id="endDate" placeholder="年 / 月 / 日" readonly>
                     </div>
                 </div>
                 
@@ -380,22 +392,34 @@
         </div>
     </div>
     
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/zh-tw.js"></script>
     <script>
         let hasSearched = false; 
         let allRawData = []; 
+        let fpStart, fpEnd; // 儲存 Flatpickr 實例
         
-        // 🌐 Google GAS 私人雲端安全傳輸通道
         const GAS_PROXY_URL = "https://script.google.com/macros/s/AKfycbxATUTPcxM-MEQAfjS-UkOCIJoxvfnLS9DA79nM9D7iJB2_pedbbpapsvuaoyVu_ZhnxA/exec";
 
         // 初始化
         document.addEventListener('DOMContentLoaded', function() {
+            // 🛠️ 初始化繁體中文日期選擇外掛，徹底蓋掉原生組件
+            const fpConfig = {
+                locale: "zh_tw",
+                dateFormat: "Y-m-d",
+                allowInput: false,
+                disableMobile: "true" // 避免手機板強制喚醒手機內建的英文日期選擇器
+            };
+            fpStart = flatpickr("#startDate", fpConfig);
+            fpEnd = flatpickr("#endDate", fpConfig);
+
             fetchDataFromProxy().then(() => {
                 loadCompanies();
                 loadDepartments();
             });
         });
         
-        // 從 Google GAS 代理通道撈取 GitHub JSON
+        // 從 Google GAS 安全代理通道抓取 JSON
         function fetchDataFromProxy() {
             return fetch(GAS_PROXY_URL)
                 .then(response => {
@@ -468,7 +492,7 @@
             
             document.getElementById('refreshCountdownContainer').classList.add('show');
             
-            // 篩選過濾邏輯 (已對接單號過濾)
+            // 篩選過濾
             let filtered = allRawData.filter(record => {
                 if (startDate && record['收件日'] < startDate) return false;
                 if (endDate && record['收件日'] > endDate) return false;
@@ -479,7 +503,7 @@
                 return true;
             });
             
-            // 延時流暢渲染
+            // 短暫延時，流暢渲染
             setTimeout(() => {
                 displayResults(filtered, filtered.length);
             }, 150);
@@ -556,14 +580,11 @@
             resultsArea.innerHTML = html;
         }
         
-        // 清空表單：確保清空欄位值並將日期類型強制切回文字，100%彈回「年 / 月 / 日」提示
+        // 修正清空邏輯：清空欄位後完全收回大表格，回到最乾淨的初始繁中佔位提示畫面
         function clearForm() {
-            const sDate = document.getElementById('startDate');
-            const eDate = document.getElementById('endDate');
-            sDate.value = '';
-            eDate.value = '';
-            sDate.type = 'text';
-            eDate.type = 'text';
+            // 使用 Flatpickr 原生語法徹底重設日期框
+            if(fpStart) fpStart.clear();
+            if(fpEnd) fpEnd.clear();
             
             document.getElementById('company').value = '';
             document.getElementById('department').value = '';
@@ -577,6 +598,7 @@
                     <p>請輸入搜尋條件並點擊「查詢」按鈕</p>
                 </div>
             `;
+            document.getElementById('refreshCountdownContainer').classList.remove('remove');
             document.getElementById('refreshCountdownContainer').classList.remove('show');
             countdownTimer = autoRefreshInterval;
         }
@@ -595,7 +617,6 @@
             if (countdownTimer < 0) {
                 countdownTimer = autoRefreshInterval;
                 fetchDataFromProxy().then(() => {
-                    // 只有當同仁此時正看著查詢結果時，背後才會自動重刷表格，否則保持靜態
                     if (hasSearched) {
                         searchRecords(); 
                     }
