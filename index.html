@@ -371,12 +371,14 @@
                 ⟳ 將在 <span id="refreshCountdown">300</span> 秒後自動同步
             </div>
             
-<div id="resultsArea">
-    <div class="initial-message">
-        <div class="initial-message-icon">🔍</div>
-        <p>請輸入搜尋條件並點擊「查詢」按鈕</p>
+            <div id="resultsArea">
+                <div class="initial-message">
+                    <div class="initial-message-icon">🔍</div>
+                    <p>請輸入搜尋條件並點擊「查詢」按鈕</p>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
     
     <script>
         let hasSearched = false; 
@@ -390,10 +392,6 @@
             fetchDataFromProxy().then(() => {
                 loadCompanies();
                 loadDepartments();
-                
-                // 💡 關鍵改動：網頁一打開，在背景默默抓完 JSON 後，自動幫同事執行「空條件查詢」
-                // 這樣同事一進網頁，直接就是看到大表格呈現所有最新的歷史資料，不需要自己去按查詢按鈕！
-
             });
         });
         
@@ -527,7 +525,6 @@
             records.forEach(record => {
                 const statusText = record['簽核狀態'] || '';
                 
-                // 動態匹配解析
                 const t1 = parseStatus(statusText, '送簽特助');
                 const t2 = parseStatus(statusText, '特助已簽');
                 const t3 = parseStatus(statusText, '送簽董事長');
@@ -559,7 +556,7 @@
             resultsArea.innerHTML = html;
         }
         
-        // 點擊「清空」時回歸全量顯示狀態，而不是顯示空白
+        // 💡 修正清空邏輯：清空欄位後完全收回大表格，回到最乾淨的初始畫面
         function clearForm() {
             document.getElementById('startDate').value = '';
             document.getElementById('endDate').value = '';
@@ -568,12 +565,19 @@
             document.getElementById('customer').value = '';
             document.getElementById('maker').value = '';
             
+            hasSearched = false;
+            document.getElementById('resultsArea').innerHTML = `
+                <div class="initial-message">
+                    <div class="initial-message-icon">🔍</div>
+                    <p>請輸入搜尋條件並點擊「查詢」按鈕</p>
+                </div>
+            `;
+            document.getElementById('refreshCountdownContainer').classList.remove('show');
             countdownTimer = autoRefreshInterval;
-            searchRecords(); // 💡 清空條件後，自動重刷出全部完整資料
         }
         
-        // 自動刷新計時器 (5分鐘)
-        let autoRefreshInterval = 300; 
+        // 自動刷新計時器 (3分鐘)
+        let autoRefreshInterval = 180; 
         let countdownTimer = autoRefreshInterval;
         
         function updateCountdown() {
@@ -586,7 +590,10 @@
             if (countdownTimer < 0) {
                 countdownTimer = autoRefreshInterval;
                 fetchDataFromProxy().then(() => {
-                    searchRecords(); // 每5分鐘在背後自動刷新當前的查詢表格
+                    // 只有當同仁此時正看著查詢結果時，背後才會自動重刷表格，否則維持靜態
+                    if (hasSearched) {
+                        searchRecords(); 
+                    }
                 });
             }
         }
