@@ -280,7 +280,7 @@
         th:nth-child(2), td:nth-child(2) { width: 9%; }   /* 公司別 */
         th:nth-child(3), td:nth-child(3) { width: 14%; }  /* 單位別 */
         th:nth-child(4), td:nth-child(4) { width: 8%; }   /* 單別 */
-        th:nth-child(5), td:nth-child(5) { width: 10%; }  /* 客戶/廠商 */
+        th:nth-child(5), td:nth-child(5) { width: 10%; }  /* 單號 */
         th:nth-child(6), td:nth-child(6) { width: 8%; }   /* 製單人 */
         th:nth-child(7), td:nth-child(7) { width: 8%; }   /* 送給特助 */
         th:nth-child(8), td:nth-child(8) { width: 8%; }   /* 特助已簽 */
@@ -512,7 +512,7 @@
                             <th>公司別</th>
                             <th>單位別</th>
                             <th>單別</th>
-                            <th>客戶/廠商</th>
+                            <th>單號</th>
                             <th>製單人</th>
                             <th>送給特助</th>
                             <th>特助已簽</th>
@@ -540,7 +540,7 @@
                         <td>${record['公司別'] || ''}</td>
                         <td>${record['單位別'] || ''}</td>
                         <td>${record['單別'] || ''}</td>
-                        <td>${record['客戶/廠商'] || ''}</td>
+                        <td>${record['單號'] || ''}</td>
                         <td>${record['製單人'] || ''}</td>
                         <td><span class="status-badge ${t1 ? 'status-done' : 'status-pending'}" title="${t1}">${t1 ? '已送簽' : '待送'}</span></td>
                         <td><span class="status-badge ${t2 ? 'status-done' : 'status-pending'}" title="${t2}">${t2 ? '已簽核' : '待簽'}</span></td>
