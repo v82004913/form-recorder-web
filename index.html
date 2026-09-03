@@ -429,7 +429,7 @@
                     return response.json();
                 })
                 .then(data => {
-                    allRawData = Array.isArray(data) 
+                    allRawData = Array.isArray(data)
                         ? data.sort((a, b) => new Date(b['收件日']) - new Date(a['收件日']))
                         : [];
                 })
@@ -500,7 +500,7 @@
                 if (docNo && (!record['單號'] || !record['單號'].toLowerCase().includes(docNo))) return false;
                 if (maker && (!record['製單人'] || !record['製單人'].toLowerCase().includes(maker))) return false;
                 return true;
-            });
+            }).sort((a, b) => new Date(b['收件日']) - new Date(a['收件日']));
             
             setTimeout(() => {
                 displayResults(filtered, filtered.length);
