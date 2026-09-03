@@ -429,7 +429,9 @@
                     return response.json();
                 })
                 .then(data => {
-                    allRawData = Array.isArray(data) ? data.reverse() : [];
+                    allRawData = Array.isArray(data) 
+                        ? data.sort((a, b) => new Date(b['收件日']) - new Date(a['收件日']))
+                        : [];
                 })
                 .catch(error => {
                     console.error('資料載入失敗:', error);
